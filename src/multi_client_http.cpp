@@ -352,13 +352,8 @@ std::shared_ptr<nghttp2::asio_http2::client::session> MultiClientHttp::get_http2
     session_ptr->on_connect([&promise](boost::asio::ip::tcp::resolver::iterator endpoint) {
         promise.set_value();
     });
-
-    boost::asio::post(m_io_cxt, [session_ptr, this](){
-        boost::fibers::fiber([session_ptr, this](){
-            session_ptr->on_error([session_ptr, this](const boost::system::error_code &error) {
-                delete_invalid_http2s_connect(session_ptr);
-            });
-        }).detach();
+    session_ptr->on_error([session_ptr, this](const boost::system::error_code &error) {
+        delete_invalid_http2s_connect(session_ptr);
     });
 
     boost::fibers::future_status status = future.wait_for(std::chrono::seconds(conn_timeout));
