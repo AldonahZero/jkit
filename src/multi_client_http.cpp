@@ -513,6 +513,7 @@ StrResponse MultiClientHttp::request(const string& host, const string& port, boo
 
         boost::fibers::future<size_t> tmp_future;
         tmp_future = http::async_write(stream, req, boost::asio::fibers::use_future);
+        tmp_future.get();
 
         //返回响应
         boost::beast::flat_buffer b;
