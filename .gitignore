@@ -1,4 +1,4 @@
-server_kit.creator.user
+fiber_kit.creator.user
 /src/build
 example/restful_test/build
 example/restful_test/bin
