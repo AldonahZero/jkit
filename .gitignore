@@ -1,0 +1,15 @@
+server_kit.creator.user
+/src/build
+example/restful_test/build
+example/restful_test/bin
+example/ws_call_test/build
+example/ws_call_test/bin
+example/ws_ts_test/build
+example/ws_ts_test/bin
+example/stress_test/bin
+example/stress_test/build
+example/asio/bin
+example/asio/build
+example/fiber/bin
+example/fiber/build
+/lib
