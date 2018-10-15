@@ -14,96 +14,26 @@ public:
 
     virtual ~TestSession();
 
-    json send_json_call(json req)
-    {
-        string res = send_call(req.dump());
-        return json::parse(res);
-    }
+    json send_json_call(json req);
 
-    void test_async_send_call()
-    {
-        //测试异步
-        auto self = shared_from_this();
-        boost::fibers::fiber([self, this](){
-            try
-            {
-                json req_json;
-                req_json["server"] = "this ia a server response";
-                json send_res = send_json_call(req_json);
-                LogDebug << send_res;
-            }
-            catch(std::exception& e)
-            {
-                LogErrorExt << e.what();
-            }
-        }).detach();
-    }
-
-    void test_send_call()
-    {
-        try
-        {
-            json req_json;
-            req_json["server"] = "this ia a server response";
-            json send_res = send_json_call(req_json);
-            LogDebug << send_res;
-        }
-        catch(std::exception& e)
-        {
-            LogErrorExt << e.what();
-        }
-    }
+    void test_async_send_call();
+    void test_send_call();
 
 private:
-    json on_recv_json_call(json req)
-    {
-        test_async_send_call();
-        //test_send_call();
-
-        json res;
-        res["server"] = "this ia a server response";
-        return std::move(res);
-    }
+    json on_recv_json_call(json req);
 
 protected:
-    virtual bool is_allow(const WsSessionContext& cxt)
-    {
-        LogDebug << cxt.path;
-        auto self = shared_from_this();
-        m_svr.add_session(self);
-        return true;
-    }
+    virtual bool is_allow(const WsSessionContext& cxt);
 
-    virtual CaseInsensitiveMultimap add_res_header(const WsSessionContext& cxt)
-    {
-        return CaseInsensitiveMultimap();
-    }
+    virtual CaseInsensitiveMultimap add_res_header(const WsSessionContext& cxt);
 
-    virtual void on_close(const WsSessionContext& cxt)
-    {
-        LogDebug << "client closed";
-        auto self = shared_from_this();
-        m_svr.remove_session(self);
-    }
+    virtual void on_close(const WsSessionContext& cxt);
 
-    virtual void on_error(const WsSessionContext& cxt)
-    {
-        auto self = shared_from_this();
-        m_svr.remove_session(self);
-    }
+    virtual void on_error(const WsSessionContext& cxt);
 
-    virtual string on_recv_call(string req_body)
-    {
-        LogDebug << "recv:" << req_body;
-        json req_json = json::parse(req_body);
-        json res = on_recv_json_call(req_json);
-        return res.dump();
-    }
+    virtual string on_recv_call(string req_body);
 
-    virtual string on_recv_busy(string req_body)
-    {
-        return "call busy";
-    }
+    virtual string on_recv_busy(string req_body);
 
 private:
     TestServer& m_svr;
@@ -201,6 +131,96 @@ TestSession::~TestSession()
 {
     std::lock_guard<boost::fibers::mutex> lk(m_svr.m_sessions_mutex);
     --m_svr.m_session_number;
+}
+
+json TestSession::send_json_call(json req)
+{
+    string res = send_call(req.dump());
+    return json::parse(res);
+}
+
+
+void TestSession::test_async_send_call()
+{
+    //测试异步
+    auto self = shared_from_this();
+    boost::fibers::fiber([self, this](){
+        try
+        {
+            json req_json;
+            req_json["server"] = "this ia a server response";
+            json send_res = send_json_call(req_json);
+            LogDebug << send_res;
+        }
+        catch(std::exception& e)
+        {
+            LogErrorExt << e.what();
+        }
+    }).detach();
+}
+
+void TestSession::test_send_call()
+{
+    try
+    {
+        json req_json;
+        req_json["server"] = "this ia a server response";
+        json send_res = send_json_call(req_json);
+        LogDebug << send_res;
+    }
+    catch(std::exception& e)
+    {
+        LogErrorExt << e.what();
+    }
+}
+
+json TestSession::on_recv_json_call(json req)
+{
+    test_async_send_call();
+    //test_send_call();
+
+    json res;
+    res["server"] = "this ia a server response";
+    return std::move(res);
+}
+
+bool TestSession::is_allow(const WsSessionContext& cxt)
+{
+    LogDebug << cxt.path;
+    auto self = shared_from_this();
+    m_svr.add_session(self);
+    return true;
+}
+
+CaseInsensitiveMultimap TestSession::add_res_header(const WsSessionContext& cxt)
+{
+    return CaseInsensitiveMultimap();
+}
+
+void TestSession::on_close(const WsSessionContext& cxt)
+{
+    LogDebug << "client closed";
+    auto self = shared_from_this();
+    m_svr.remove_session(self);
+}
+
+void TestSession::on_error(const WsSessionContext& cxt)
+{
+    auto self = shared_from_this();
+    m_svr.remove_session(self);
+}
+
+string TestSession::on_recv_call(string req_body)
+{
+    LogDebug << "recv:" << req_body;
+    json req_json = json::parse(req_body);
+    json res = on_recv_json_call(req_json);
+    return res.dump();
+}
+
+string TestSession::on_recv_busy(string req_body)
+{
+    return "call busy";
 }
 
 

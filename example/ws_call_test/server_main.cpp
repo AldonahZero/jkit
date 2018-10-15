@@ -12,13 +12,13 @@ int main()
     server.start();
 
     //模拟停止
-//    boost::fibers::fiber([&server, &frame_cxt](){
-//        boost::this_fiber::sleep_for(std::chrono::seconds(15));
-//        server.stop();
-//        std::cout << "server stop()\n";
+    boost::fibers::fiber([&server, &frame_cxt](){
+        boost::this_fiber::sleep_for(std::chrono::seconds(15));
+        server.stop();
+        std::cout << "server stop()\n";
 
-//        frame_cxt.notify_stop();
-//    }).detach();
+        frame_cxt.notify_stop();
+    }).detach();
 
     frame_cxt.wait();
     return 0;
