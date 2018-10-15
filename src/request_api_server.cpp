@@ -3,11 +3,7 @@
 RequestApiServer::RequestApiServer(int thread_count, string listen_address, int listen_port) :
    m_thread_count(thread_count), m_work(new io_context_work(m_io_cxt.get_executor())), m_accept(m_io_cxt)
 {
-    tcp::endpoint endpoint{boost::asio::ip::address::from_string(listen_address), (uint16_t)listen_port};
-    m_accept.open(endpoint.protocol());
-    m_accept.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-    m_accept.bind(endpoint);
-    m_accept.listen();
+    m_listen_ep = tcp::endpoint{boost::asio::ip::address::from_string(listen_address), (uint16_t)listen_port};
 }
 
 RequestApiServer::~RequestApiServer()
@@ -40,11 +36,11 @@ void RequestApiServer::session(tcp::socket& socket)
     }
 
     boost::fibers::future<boost::system::error_code> f;
-    for(;;)
+    while(m_running)
     {
         // Read a request
         StrRequest req;
-        f = http::async_read(socket, buffer, req, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t n) {
+        f = http::async_read(socket, buffer, req, boost::asio::fibers::use_future([](boost::system::error_code ec, size_t n) -> boost::system::error_code {
                                  return ec;
                              }));
         ec = f.get();
@@ -89,6 +85,11 @@ void RequestApiServer::accept()
 {
     try
     {
+        m_accept.open(m_listen_ep.protocol());
+        m_accept.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+        m_accept.bind(m_listen_ep);
+        m_accept.listen();
+
         boost::fibers::future<boost::system::error_code> f;
         boost::system::error_code ec;
         for (;;)
@@ -106,6 +107,11 @@ void RequestApiServer::accept()
                     LogErrorExt << ec.message();
                     continue;
                 }
+                else if(ec.value() == boost::asio::error::operation_aborted) //主动关闭结束
+                {
+                    LogWarnExt << ec.message();
+                    break;
+                }
                 else
                 {
                     throw_with_trace(boost::system::system_error(ec)); //some other error
@@ -122,7 +128,16 @@ void RequestApiServer::accept()
                     {
                         LogErrorExt << e.what() << "," << typeid(e).name();
                     }
+                    std::lock_guard<boost::fibers::mutex> lk(m_session_mutex);
+                    --m_session_number;
+                    if(!m_running && m_session_number == 0)
+                    {
+                        m_session_cnd.notify_one();
+                    }
                 }).detach();
+
+                std::lock_guard<boost::fibers::mutex> lk(m_session_mutex);
+                ++m_session_number;
             }
         }
     }
@@ -135,9 +150,16 @@ void RequestApiServer::accept()
 
 void RequestApiServer::start()
 {
-    boost::fibers::fiber([this](){
+    m_io_cxt.restart();
+    m_running = true;
+    {
+        std::lock_guard<boost::fibers::mutex> lk(m_session_mutex);
+        m_session_number = 0;
+    }
+
+    m_accept_fiber = boost::fibers::fiber([this](){
         this->accept();
-    }).detach();
+    });
 
     for(int i=0; i<m_thread_count; ++i)
     {
@@ -150,12 +172,26 @@ void RequestApiServer::start()
 
 void RequestApiServer::stop()
 {
+    m_running = false;
+    boost::system::error_code ec;
+    m_accept.close(ec);
+    if(m_accept_fiber.joinable())
+    {
+        m_accept_fiber.join();
+    }
+
+    {
+        std::unique_lock<boost::fibers::mutex> lk(m_session_mutex);
+        m_session_cnd.wait(lk, [this](){
+            return m_session_number == 0;
+        });
+    }
+
     m_io_cxt.stop();
     for(int i=0; i<m_thread_count; ++i)
     {
         m_threads[i].join();
     }
-    m_io_cxt.restart();
 }
 
 void RequestApiServer::handle_request(RequestContext& cxt)

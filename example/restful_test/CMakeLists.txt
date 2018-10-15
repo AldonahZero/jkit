@@ -14,7 +14,7 @@ set(Boost_LIBRARIES boost_log boost_fiber boost_context boost_log_setup boost_th
 include_directories(../../include)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 SET(EXECUTABLE_OUTPUT_PATH ${OUTDIR})
-set(KLink_LIBRARIES klogger backtrace pthread dl crypto ssl)
+set(KLink_LIBRARIES klogger_sync backtrace pthread dl crypto ssl)
 SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 MESSAGE(STATUS "cxx flags is ${CMAKE_CXX_FLAGS}")

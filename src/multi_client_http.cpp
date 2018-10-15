@@ -7,15 +7,27 @@
 MultiClientHttp::MultiClientHttp(int thread_count) :
     m_thread_count(thread_count), m_work(new io_context_work(m_io_cxt.get_executor()))
 {
-    boost::fibers::fiber([this](){
+    boost::fibers::fiber f([this](){
         while(1)
         {
             delete_timeout_http_connect();
             delete_timeout_https_connect();
             delete_timeout_http2s_connect();
-            boost::this_fiber::sleep_for(std::chrono::seconds(30));
+            bool stop = false;
+            {
+                std::unique_lock<boost::fibers::mutex> lk(m_stop_mux);
+                stop = m_stop_cnd.wait_for(lk, std::chrono::seconds(30), [this](){
+                    return !m_running;
+                });
+            }
+            if(stop)
+            {
+                break;
+            }
         }
-    }).detach();
+    });
+
+    m_timer_fiber.swap(f);
 
     for(int i=0; i<m_thread_count; ++i)
     {
@@ -23,6 +35,26 @@ MultiClientHttp::MultiClientHttp(int thread_count) :
             m_io_cxt.run();
         });
         m_threads.push_back(std::move(t));
+    }
+}
+
+MultiClientHttp::~MultiClientHttp()
+{
+    {
+        std::unique_lock<boost::fibers::mutex> lk(m_stop_mux);
+        m_running = false;
+        m_stop_cnd.notify_all();
+    }
+
+    m_io_cxt.stop();
+    for(int i=0; i<m_thread_count; ++i)
+    {
+        m_threads[i].join();
+    }
+
+    if(m_timer_fiber.joinable())
+    {
+        m_timer_fiber.join();
     }
 }
 

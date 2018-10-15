@@ -69,6 +69,8 @@ protected:
     virtual bool is_allow(const WsSessionContext& cxt)
     {
         LogDebug << cxt.path;
+        auto self = shared_from_this();
+        m_svr.add_session(self);
         return true;
     }
 
@@ -80,11 +82,14 @@ protected:
     virtual void on_close(const WsSessionContext& cxt)
     {
         LogDebug << "client closed";
+        auto self = shared_from_this();
+        m_svr.remove_session(self);
     }
 
     virtual void on_error(const WsSessionContext& cxt)
     {
-
+        auto self = shared_from_this();
+        m_svr.remove_session(self);
     }
 
     virtual string on_recv_call(string req_body)
@@ -116,8 +121,29 @@ public:
         m_running = false;
         m_server.create_session = [this](WsSessionContext& cxt, tcp::socket& s) mutable
         {
-            return WsSessionPtr(new TestSession(cxt, s, *this));
+            auto ses = WsSessionPtr(new TestSession(cxt, s, *this));
+            return ses;
         };
+    }
+
+    void add_session(WsSessionPtr ses)
+    {
+        std::lock_guard<boost::fibers::mutex> lk(m_sessions_mutex);
+        m_sessions.push_back(ses);
+    }
+
+    void remove_session(WsSessionPtr ses)
+    {
+        std::lock_guard<boost::fibers::mutex> lk(m_sessions_mutex);
+        auto it = m_sessions.begin();
+        for(; it!=m_sessions.end(); ++it)
+        {
+            if((*it).get() == ses.get())
+            {
+                m_sessions.erase(it);
+                break;
+            }
+        }
     }
 
     ~TestServer() = default;
@@ -142,6 +168,11 @@ public:
 
     void stop()
     {
+        for(auto& ses : m_sessions)
+        {
+            ses->stop();
+        }
+        m_sessions.clear();
         m_server.stop();
         m_running = false;
         if(m_f.joinable())
@@ -153,6 +184,7 @@ public:
 
 private:
     WsServer m_server;
+    vector<WsSessionPtr> m_sessions;
     boost::fibers::mutex m_sessions_mutex;
     int m_session_number = 0;
     atomic_bool m_running;

@@ -21,7 +21,7 @@ MESSAGE(STATUS "cxx flags is ${CMAKE_CXX_FLAGS}")
 
 
 add_executable(call_server server_main.cpp)
-target_link_libraries(call_server -Wl,--start-group klogger ws_call_server ${Boost_LIBRARIES} ${KLink_LIBRARIES} -Wl,--end-group)
+target_link_libraries(call_server -Wl,--start-group klogger_sync ws_call_server ${Boost_LIBRARIES} ${KLink_LIBRARIES} -Wl,--end-group)
 
 add_executable(call_client client_main.cpp)
 target_link_libraries(call_client -Wl,--start-group ${Boost_LIBRARIES} ${KLink_LIBRARIES} boost_coroutine -Wl,--end-group)

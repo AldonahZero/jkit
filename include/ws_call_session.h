@@ -22,7 +22,7 @@ public:
     virtual ~WsCallSession();
 
     void start() override;
-    void stop();
+    void stop() override;
 
     string send_call(string req_body);
 

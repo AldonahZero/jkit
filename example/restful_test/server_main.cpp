@@ -13,13 +13,16 @@ int main()
     api.start();
 
     //模拟停止
-//    boost::fibers::fiber([&api, &frame_cxt](){
-//        boost::this_fiber::sleep_for(std::chrono::seconds(15));
-//        api.stop();
-//        std::cout << "api stop()\n";
+    boost::fibers::fiber([&api, &frame_cxt](){
+        boost::this_fiber::sleep_for(std::chrono::seconds(5));
+        api.stop();
+        std::cout << "api stop()\n";
+        boost::this_fiber::sleep_for(std::chrono::seconds(5));
+        api.start();
+        std::cout << "api start()\n";
 
-//        frame_cxt.notify_stop();
-//    }).detach();
+        //frame_cxt.notify_stop();
+    }).detach();
 
     frame_cxt.wait();
     return 0;

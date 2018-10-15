@@ -12,7 +12,7 @@ public:
     virtual ~WsStreamSession();
 
     void start() override;
-    void stop();
+    void stop() override;
 
     //不使用string而使用any作接口,是因为on_send_block中处理发送缓冲需要额外信息,比如时间
     void send(boost::any pkt);

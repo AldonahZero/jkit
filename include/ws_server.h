@@ -64,6 +64,7 @@ public:
     virtual ~WsSession() {}
 
     virtual void start() { LogErrorExt << "not implemented";}
+    virtual void stop() { LogErrorExt << "not implemented";}
 };
 
 typedef std::shared_ptr<WsSession> WsSessionPtr;
@@ -95,6 +96,13 @@ private:
     std::unique_ptr<io_context_work> m_work;
     tcp::acceptor m_accept;
     std::vector<std::thread> m_threads;
+
+    boost::fibers::fiber m_accept_fiber;
+    tcp::endpoint m_listen_ep;
+    boost::fibers::mutex m_session_mutex;
+    int m_session_number = 0;
+    boost::fibers::condition_variable_any m_session_cnd;
+    atomic_bool m_running;
 };
 
 #endif

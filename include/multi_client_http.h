@@ -88,6 +88,7 @@ class MultiClientHttp
 {
 public:
     MultiClientHttp(int thread_count = 1);
+    ~MultiClientHttp();
 
 
     //http请求
@@ -143,7 +144,7 @@ protected:
     boost::asio::io_context m_io_cxt;
     typedef boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_context_work;
     std::unique_ptr<io_context_work> m_work;
-     std::vector<std::thread> m_threads;
+    std::vector<std::thread> m_threads;
 
     size_t m_timeout = 3000;
     size_t m_timeout_connect = 2000;
@@ -158,6 +159,11 @@ protected:
     list<Http2sConnection> m_cache_http2s_session;
 
     int m_unuse_timeout = 55; //超过55秒没有使用就断掉
+
+    boost::fibers::condition_variable_any m_stop_cnd;
+    boost::fibers::mutex m_stop_mux;
+    boost::fibers::fiber m_timer_fiber;
+    bool m_running = true;
 };
 
 #endif /* MULTI_CLIENT_HTTP_HPP */
