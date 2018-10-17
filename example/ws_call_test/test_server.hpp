@@ -148,7 +148,7 @@ void TestSession::test_async_send_call()
         try
         {
             json req_json;
-            req_json["server"] = "this ia a server response";
+            req_json["server"] = "this ia a server request";
             json send_res = send_json_call(req_json);
             LogDebug << send_res;
         }
@@ -164,7 +164,7 @@ void TestSession::test_send_call()
     try
     {
         json req_json;
-        req_json["server"] = "this ia a server response";
+        req_json["server"] = "this ia a server request";
         json send_res = send_json_call(req_json);
         LogDebug << send_res;
     }

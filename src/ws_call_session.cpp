@@ -180,6 +180,8 @@ void WsCallSession::process_recv_data()
         else //非法数据
         {
             LogErrorExt << "incorrect data" << "\nremote_ip:" << m_cxt.remote_endpoint;
+            m_ws.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+            on_error(m_cxt);
             break;
         }
     }
