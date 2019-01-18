@@ -89,6 +89,8 @@ private:
 
     void accept();
 
+    void set_socket_opt(tcp::socket& socket);
+
 private:
     int m_thread_count = 1;
     boost::asio::io_context m_io_cxt;
