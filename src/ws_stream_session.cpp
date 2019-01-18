@@ -27,6 +27,7 @@ void WsStreamSession::start()
         std::lock_guard<boost::fibers::mutex> lk(m_mutex);
         m_running = true;
     }
+    m_ws.binary(true);
 
     boost::fibers::fiber fsend([this](){
         this->process_send_data();

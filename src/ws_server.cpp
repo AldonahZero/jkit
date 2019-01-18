@@ -2,7 +2,7 @@
 #include "ws_call_session.h"
 
 WsServer::WsServer(int thread_count, string listen_address, int listen_port) :
-   m_thread_count(thread_count), m_work(new io_context_work(m_io_cxt.get_executor())), m_accept(m_io_cxt)
+    m_thread_count(thread_count), m_work(new io_context_work(m_io_cxt.get_executor())), m_accept(m_io_cxt)
 {
     m_listen_ep = tcp::endpoint{boost::asio::ip::address::from_string(listen_address), (uint16_t)listen_port};
     create_session = [](WsSessionContext& c, tcp::socket& s) mutable ->WsSessionPtr  {
@@ -61,8 +61,43 @@ void WsServer::stop()
     }
 }
 
+void WsServer::set_socket_opt(tcp::socket& socket)
+{
+    //boost::asio::socket_base::keep_alive opt_keep_alive(true);
+    //socket.set_option(opt_keep_alive);
+
+    int flags = 1;
+    int tcp_keepalive_time = 20;
+    int tcp_keepalive_probes = 3;
+    int tcp_keepalive_intvl = 3;
+
+    int ret = 0;
+    ret = setsockopt(socket.native_handle(), SOL_SOCKET, SO_KEEPALIVE, &flags, sizeof(flags));
+    if(ret < 0)
+    {
+        LogErrorExt << "setsockopt SO_KEEPALIVE failed";
+    }
+    ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPIDLE, &tcp_keepalive_time, sizeof(tcp_keepalive_time));
+    if(ret < 0)
+    {
+        LogErrorExt << "setsockopt TCP_KEEPIDLE failed";
+    }
+    ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPINTVL, &tcp_keepalive_intvl, sizeof(tcp_keepalive_intvl));
+    if(ret < 0)
+    {
+        LogErrorExt << "setsockopt TCP_KEEPINTVL failed";
+    }
+    ret = setsockopt(socket.native_handle(), IPPROTO_TCP, TCP_KEEPCNT, &tcp_keepalive_probes, sizeof(tcp_keepalive_probes));
+    if(ret < 0)
+    {
+        LogErrorExt << "setsockopt TCP_KEEPCNT failed";
+    }
+}
+
 void WsServer::session(tcp::socket& socket)
 {
+    set_socket_opt(socket);
+
     boost::system::error_code ec;
     boost::fibers::future<boost::system::error_code> f;
     boost::beast::flat_buffer buffer;

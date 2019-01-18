@@ -13,3 +13,4 @@ example/asio/build
 example/fiber/bin
 example/fiber/build
 /lib
+*.o

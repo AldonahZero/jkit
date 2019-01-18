@@ -31,6 +31,7 @@ void WsCallSession::start()
         std::lock_guard<boost::fibers::mutex> lk(m_mutex);
         m_running = true;
     }
+    m_ws.binary(true);
 
     m_send_id = 1;
 
