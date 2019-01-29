@@ -16,7 +16,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../lib)
 SET(EXECUTABLE_OUTPUT_PATH ${OUTDIR})
 set(KLink_LIBRARIES klogger_sync backtrace pthread dl crypto ssl)
 SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -std=c++1z")
 MESSAGE(STATUS "cxx flags is ${CMAKE_CXX_FLAGS}")
 
 

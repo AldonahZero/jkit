@@ -30,12 +30,6 @@ void log_trace(std::string const& fmt, Arguments&&... args)
 }
 
 template<typename... Arguments>
-void log_trace_ext(std::string const& fmt, Arguments&&... args)
-{
-   BOOST_LOG_TRIVIAL(trace) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
-}
-
-template<typename... Arguments>
 void log_debug(std::string const& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(debug) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
