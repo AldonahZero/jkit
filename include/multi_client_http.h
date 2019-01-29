@@ -28,6 +28,10 @@ using namespace boost::beast;    // from <boost/beast/http.hpp>
 using boost::posix_time::ptime;
 namespace ssl = boost::asio::ssl;
 
+typedef boost::asio::ip::tcp::resolver::results_type ResolverResult;
+typedef boost::asio::ip::tcp::endpoint  Endpoint;
+typedef boost::system::error_code BSError;
+
 namespace nghttp2 {
 namespace asio_http2 {
 namespace client {
@@ -76,8 +80,8 @@ struct Http2sConnection
 
 struct Http2Resopnse
 {
-    int status;
-    int body_size;
+    http::status status;
+    int body_size = 0;
     string body;
 };
 
@@ -92,52 +96,58 @@ public:
 
 
     //http请求
-    string request(const string& host, const string& port, boost::beast::http::verb method, const string& target, const string& body);
+    string request(const string& host, const string& port, boost::beast::http::verb method, const string& target, const string& body) noexcept;
 
-    StrResponse request(const string& host, const string& port, StrRequest &req);
+    StrResponse request(const string& host, const string& port, const StrRequest &req) noexcept;
 
 
     //https请求
 
     //需要确认证书
     string request(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, const string& cert,
-                   boost::beast::http::verb method, const string& target, const string& body);
+                   boost::beast::http::verb method, const string& target, const string& body)  noexcept;
 
-    StrResponse request(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, const string& cert, StrRequest &req);
+    StrResponse request(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, const string& cert, StrRequest &req) noexcept;
 
     //不用确认证书
-    StrResponse request(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, StrRequest &req);
+    StrResponse request(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, StrRequest &req) noexcept;
 
     //双向确认
 
     //http/2 ssl请求
-    Http2Resopnse request2(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, const string& cert,
-                          boost::beast::http::verb method, const string& target, const std::map<string,string>& headers, const string& body);
-
     //不用确认证书
     Http2Resopnse request2(const string& host, const string& port, boost::asio::ssl::context::method ssl_method,
-                          boost::beast::http::verb method, const string& target, const std::map<string,string>& headers, const string& body);
+                          boost::beast::http::verb method, const string& target, const std::map<string,string>& headers, const string& body) noexcept;
+
+
+    Http2Resopnse request2(const string& host, const string& port, boost::asio::ssl::context::method ssl_method, const string& cert,
+                          boost::beast::http::verb method, const string& target, const std::map<string,string>& headers, const string& body) noexcept;
 
 private:
     //http1.1请求缓存操作
-    HttpConnectionPtr get_http_connect(const string& host, const string& port);
-    void release_http_connect(HttpConnectionPtr conn_ptr);
-    void delete_invalid_http_connect(HttpConnectionPtr conn_ptr);
-    void delete_timeout_http_connect();
+    HttpConnectionPtr get_http_connect(const string& host, const string& port) noexcept;
+    void release_http_connect(HttpConnectionPtr conn_ptr) noexcept;
+    void delete_invalid_http_connect(HttpConnectionPtr conn_ptr) noexcept;
+    void delete_timeout_http_connect() noexcept;
 
     //https 1.1请求缓存操作
     HttpsConnectionPtr get_https_connect(const string& host, const string& port, boost::asio::ssl::context::method ssl_method,
-                                                                    const string& cert);
-    void release_https_connect(HttpsConnectionPtr stream_ptr);
-    void delete_invalid_https_connect(HttpsConnectionPtr stream_ptr);
-    void delete_timeout_https_connect();
+                                                                    const string& cert) noexcept;
+    void release_https_connect(HttpsConnectionPtr stream_ptr) noexcept;
+    void delete_invalid_https_connect(HttpsConnectionPtr stream_ptr) noexcept;
+    void delete_timeout_https_connect() noexcept;
 
     //https 2 请求缓存操作
     std::shared_ptr<nghttp2::asio_http2::client::session> get_http2s_connect_stream(const string& host, const string& port, boost::asio::ssl::context::method ssl_method,
-                                                                    const string& cert);
+                                                                    const string& cert) noexcept;
     //void release_http2s_connect_stream(std::shared_ptr<nghttp2::asio_http2::client::session> session_ptr);
-    void delete_invalid_http2s_connect(std::shared_ptr<nghttp2::asio_http2::client::session> session_ptr);
-    void delete_timeout_http2s_connect();
+    void delete_invalid_http2s_connect(std::shared_ptr<nghttp2::asio_http2::client::session> session_ptr) noexcept;
+    void delete_timeout_http2s_connect() noexcept;
+
+private:
+    bool resolve(const string& host, const string& port, int timeout, ResolverResult& rr) noexcept;
+    bool connect(tcp::socket& socket, const ResolverResult& rr, int timeout) noexcept;
+    bool set_ssl(ssl::context& ctx, const string& cert) noexcept;
 
 protected:
     int m_thread_count = 1;

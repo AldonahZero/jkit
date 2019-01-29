@@ -1,6 +1,6 @@
 include
 D:\msys64\usr\include
-D:\msys64\usr\lib\gcc\x86_64-pc-msys\7.3.0\include\c++
+D:\msys64\usr\lib\gcc\x86_64-pc-msys\7.4.0\include\c++
 example/ws_call_test
 example/ws_ts_test
 example/fiber
