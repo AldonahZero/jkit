@@ -76,7 +76,6 @@ include/json.hpp
 include/json.hpp
 include/logger.h
 include/request_api_server.h
-include/thread_barrier.hpp
 include/use_future.hpp
 include/wait_stuff.hpp
 include/wait_stuff.hpp

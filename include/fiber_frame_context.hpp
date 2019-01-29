@@ -5,7 +5,6 @@
 #include <thread>
 #include <mutex>
 #include <boost/fiber/all.hpp>
-#include "thread_barrier.hpp"
 
 //只能有一个实例,并且要在main入口处理调用 init() 在main返回前调用 wait()
 //如果想要停止并退出进程,需要调用 notify_stop()
@@ -52,27 +51,21 @@ void FiberFrameContext::init()
     }
     else
     {
-        boost::fibers::use_scheduling_algorithm<boost::fibers::algo::work_stealing>(run_thread_count, true);
-    }
-    thread_barrier b(run_thread_count);
-    auto thread_fun = [&b, this](){
-        boost::fibers::use_scheduling_algorithm<boost::fibers::algo::work_stealing>(run_thread_count, true);
-        b.wait();
+        auto thread_fun = [this](){
+            boost::fibers::use_scheduling_algorithm<boost::fibers::algo::work_stealing>(run_thread_count, true);
+            //检查结束条件
+            {
+                std::unique_lock<std::mutex> lk(m_mtx);
+                m_cnd_stop.wait(lk, [this]() { return !m_running; } );
+            }
+        };
 
-        //检查结束条件
+        for(int i=1; i<run_thread_count; ++i)
         {
-            std::unique_lock<std::mutex> lk(m_mtx);
-            m_cnd_stop.wait(lk, [this]() { return !m_running; } );
+            m_threads.push_back(std::thread(thread_fun));
         }
-    };
-
-    for(int i=1; i<run_thread_count; ++i)
-    {
-        m_threads.push_back(std::thread(thread_fun));
+        boost::fibers::use_scheduling_algorithm<boost::fibers::algo::work_stealing>(run_thread_count, true);       
     }
-
-    //同步use_scheduling_algorithm
-    b.wait();
 }
 
 void FiberFrameContext::notify_stop()
