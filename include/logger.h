@@ -17,47 +17,70 @@
 #define LogError	BOOST_LOG_TRIVIAL(error)
 #define LogFatal	BOOST_LOG_TRIVIAL(fatal)
 
-#define LogDebugExt	LogDebug << __FILE__ << ",Line " << __LINE__ << ","
-#define LogErrorExt LogError << __FILE__ << ",Line " << __LINE__ << ","
-#define LogWarnExt LogWarn << __FILE__ << ",Line " << __LINE__ << ","
-#define LogFatalExt LogFatal << __FILE__ << ",Line " << __LINE__ << ","
+#define LogDebugExt	LogDebug << __FILE__ << ",line " << __LINE__ << ","
+#define LogErrorExt LogError << __FILE__ << ",line " << __LINE__ << ","
+#define LogWarnExt LogWarn << __FILE__ << ",line " << __LINE__ << ","
+#define LogFatalExt LogFatal << __FILE__ << ",line " << __LINE__ << ","
 
 
 template<typename... Arguments>
-void log_trace(std::string const& fmt, Arguments&&... args)
+void log_trace(const std::string& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(trace) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
 }
 
 template<typename... Arguments>
-void log_debug(std::string const& fmt, Arguments&&... args)
+void log_debug(const std::string& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(debug) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
 }
 
 template<typename... Arguments>
-void log_info(std::string const& fmt, Arguments&&... args)
+void log_info(const std::string& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(info) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
 }
 
 template<typename... Arguments>
-void log_warning(std::string const& fmt, Arguments&&... args)
+void log_warning(const std::string& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(warning) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
 }
 
 template<typename... Arguments>
-void log_error(std::string const& fmt, Arguments&&... args)
+void log_warning_prefix(const char* file, int line, const std::string& fmt, Arguments&&... args)
+{
+   BOOST_LOG_TRIVIAL(warning) << file << ",line " << line << "," << (boost::format(fmt) % ... %std::forward<Arguments>(args));
+}
+#define log_warning_ext(fmt, ...) log_warning_prefix(__FILE__, __LINE__, fmt, __VA_ARGS__)
+
+template<typename... Arguments>
+void log_error(const std::string& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(error) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
 }
 
 template<typename... Arguments>
-void log_fatal(std::string const& fmt, Arguments&&... args)
+void log_error_with_prefix(const char* file, int line, const std::string& fmt, Arguments&&... args)
+{
+   BOOST_LOG_TRIVIAL(error) << file << ",line " << line << "," << (boost::format(fmt) % ... %std::forward<Arguments>(args));
+}
+
+#define log_error_ext(fmt, ...) log_error_with_prefix(__FILE__, __LINE__, fmt, __VA_ARGS__)
+
+template<typename... Arguments>
+void log_fatal(const std::string& fmt, Arguments&&... args)
 {
    BOOST_LOG_TRIVIAL(fatal) << (boost::format(fmt) % ... %std::forward<Arguments>(args));
 }
+
+template<typename... Arguments>
+void log_fatal_prefix(const char* file, int line, const std::string& fmt, Arguments&&... args)
+{
+   BOOST_LOG_TRIVIAL(fatal) << file << ",line " << line << "," << (boost::format(fmt) % ... %std::forward<Arguments>(args));
+}
+
+#define log_fatal_ext(fmt, ...) log_fatal_prefix(__FILE__, __LINE__, fmt, __VA_ARGS__)
 
 
 //注意,异步日志在压力测试时,会因为日志队列导致内存不断增长
