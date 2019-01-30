@@ -45,7 +45,6 @@ struct HttpConnection
     string host;
     string port;
     std::shared_ptr<tcp::socket> socket_ptr;
-    std::shared_ptr<boost::asio::steady_timer> timer_ptr;
     int dns_timeout = 5;
     int conn_timeout = 3;
     int req_timeout = 6;
@@ -60,9 +59,9 @@ struct HttpsConnection
     string host;
     string port;
     std::shared_ptr<ssl::stream<tcp::socket>> stream_ptr;
-    std::shared_ptr<boost::asio::steady_timer> timer_ptr;
     int dns_timeout = 5;
     int conn_timeout = 3;
+    int handshake_timeout = 3;
     int req_timeout = 6;
     bool in_use = false;
     ptime last_use;
@@ -80,7 +79,7 @@ struct Http2sConnection
 
 struct Http2Resopnse
 {
-    http::status status;
+    int status;
     int body_size = 0;
     string body;
 };

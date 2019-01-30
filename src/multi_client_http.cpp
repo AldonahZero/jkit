@@ -89,10 +89,10 @@ bool MultiClientHttp::connect(tcp::socket& socket, const ResolverResult& rr, int
     boost::fibers::future<BSError> f;
     BSError ec;
     boost::fibers::future_status fs;
-    f = boost::asio::async_connect(*socket_ptr, rr, boost::asio::fibers::use_future([](const BSError& ec, const Endpoint&) {
+    f = socket.async_connect(*rr.begin(), boost::asio::fibers::use_future([](const BSError& ec) {
         return ec;
     }));
-    fs = f.wait_for(std::chrono::seconds(conn.conn_timeout));
+    fs = f.wait_for(std::chrono::seconds(timeout));
     if(fs == boost::fibers::future_status::timeout)
     {
         log_error_ext("connect timeout");
@@ -274,7 +274,7 @@ HttpsConnectionPtr MultiClientHttp::get_https_connect(const string& host, const 
     //设置ssl
     if(!SSL_set_tlsext_host_name(stream.native_handle(), conn.host.c_str()))
     {
-        log_error_ext(ec.message());
+        log_error_ext("SSL_set_tlsext_host_name failed");
         return nullptr;
     }
     //连接
@@ -287,10 +287,10 @@ HttpsConnectionPtr MultiClientHttp::get_https_connect(const string& host, const 
     boost::fibers::future<BSError> f;
     BSError ec;
     boost::fibers::future_status fs;
-    f = stream.async_handshake(ssl::stream_base::client, boost::asio::fibers::use_future([](const BSError& ec, size_t){
+    f = stream.async_handshake(ssl::stream_base::client, boost::asio::fibers::use_future([](const BSError& ec){
         return ec;
     }));
-    fs = f.wait_for(std::chrono::seconds(conn.conn_timeout));
+    fs = f.wait_for(std::chrono::seconds(conn.handshake_timeout));
     if(fs == boost::fibers::future_status::timeout)
     {
         log_error_ext("handshake timeout");
@@ -587,7 +587,7 @@ StrResponse MultiClientHttp::request(const string& host, const string& port, boo
         log_error_ext(ec.message());
         StrResponse res;
         res.result(http::status::connection_closed_without_response);
-        delete_invalid_http_connect(conn_ptr);
+        delete_invalid_https_connect(conn_ptr);
         return std::move(res);
     }
     //返回响应
@@ -602,7 +602,7 @@ StrResponse MultiClientHttp::request(const string& host, const string& port, boo
         log_error_ext("req timeout");
         StrResponse res;
         res.result(http::status::request_timeout);
-        delete_invalid_http_connect(conn_ptr);
+        delete_invalid_https_connect(conn_ptr);
         return std::move(res);
     }
     ec = f.get();
@@ -611,7 +611,7 @@ StrResponse MultiClientHttp::request(const string& host, const string& port, boo
         log_error_ext(ec.message());
         StrResponse res;
         res.result(http::status::connection_closed_without_response);
-        delete_invalid_http_connect(conn_ptr);
+        delete_invalid_https_connect(conn_ptr);
         return std::move(res);
     }
     if(res.need_eof())
@@ -619,7 +619,7 @@ StrResponse MultiClientHttp::request(const string& host, const string& port, boo
         f = stream.async_shutdown(boost::asio::fibers::use_future([](boost::system::error_code ec){
                                       return ec;
                                   }));
-        ec = ferror.get();
+        ec = f.get();
         if(ec == boost::asio::error::eof)
         {
             // Rationale:
@@ -649,7 +649,7 @@ Http2Resopnse MultiClientHttp::request2(const string& host, const string& port, 
     if(session_ptr)
     {
         Http2Resopnse h2_res;
-        h2_res.status = http::status::network_connect_timeout_error;
+        h2_res.status = (int)http::status::network_connect_timeout_error;
         return std::move(h2_res);
     }
     nghttp2::asio_http2::header_map h2_headers;
@@ -673,7 +673,7 @@ Http2Resopnse MultiClientHttp::request2(const string& host, const string& port, 
     if(ec)
     {
         Http2Resopnse h2_res;
-        h2_res.status = http::status::connection_closed_without_response;
+        h2_res.status = (int)http::status::connection_closed_without_response;
         return std::move(h2_res);
     }
 
